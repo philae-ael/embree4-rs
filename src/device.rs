@@ -8,6 +8,9 @@ pub struct Device {
     pub(crate) handle: embree4_sys::RTCDevice,
 }
 
+unsafe impl Send for Device {}
+unsafe impl Sync for Device {}
+
 impl Device {
     /// Constructs a new `Device` using the provided configuration string.
     ///
