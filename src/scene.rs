@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use embree4_sys::RTCBounds;
 
 use crate::{device_error_or, device_error_raw, geometry::Geometry, Device};
 
@@ -156,5 +157,12 @@ impl<'a> CommittedScene<'a> {
                 None
             },
         )
+    }
+
+    /// Returns the axis-aligned bounding box og the scene
+    pub fn bounds(&self) -> Result<embree4_sys::RTCBounds> {
+        let mut bounds = embree4_sys::RTCBounds::default();
+        unsafe { embree4_sys::rtcGetSceneBounds(self.scene.handle, &mut bounds as *mut RTCBounds) };
+        device_error_or(self.scene.device, bounds, "Could not get bounds")
     }
 }
