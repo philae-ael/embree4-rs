@@ -48,6 +48,13 @@ impl Device {
     pub fn error(&self) -> Option<embree4_sys::RTCError> {
         device_error_raw(self.handle)
     }
+
+    /// # Safety
+    ///
+    /// The device must be kept alive and must not be released
+    pub unsafe fn as_raw_handle(&self) -> embree4_sys::RTCDevice {
+        self.handle
+    }
 }
 
 impl Drop for Device {
