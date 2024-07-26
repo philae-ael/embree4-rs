@@ -1,6 +1,8 @@
+mod sphere;
 mod tri_mesh;
 mod user;
 
+pub use sphere::*;
 pub use tri_mesh::*;
 pub use user::*;
 
