@@ -106,13 +106,16 @@ impl<'a> Scene<'a> {
     /// let scene = Scene::try_new(&device, options).unwrap();
     /// let scene = scene.commit().unwrap();
     /// ```
-    pub fn commit(&self) -> Result<CommittedScene> {
+    pub fn commit(&self) -> Result<CommittedScene<'a>> {
         unsafe {
             embree4_sys::rtcCommitScene(self.handle);
         }
         device_error_or(
             self.device,
-            CommittedScene { scene: self },
+            CommittedScene {
+                device: self.device,
+                handle: self.handle,
+            },
             "Could not commit scene",
         )
     }
@@ -133,7 +136,8 @@ pub struct SceneOptions {
 }
 
 pub struct CommittedScene<'a> {
-    scene: &'a Scene<'a>,
+    device: &'a Device,
+    handle: embree4_sys::RTCScene,
 }
 
 unsafe impl<'a> Sync for CommittedScene<'a> {}
@@ -146,9 +150,9 @@ impl<'a> CommittedScene<'a> {
         };
 
         unsafe {
-            embree4_sys::rtcIntersect1(self.scene.handle, &mut ray_hit, std::ptr::null_mut());
+            embree4_sys::rtcIntersect1(self.handle, &mut ray_hit, std::ptr::null_mut());
         }
-        device_error_or(self.scene.device, (), "Could not intersect ray")?;
+        device_error_or(self.device, (), "Could not intersect ray")?;
 
         Ok(
             if ray_hit.hit.geomID != embree4_sys::RTC_INVALID_GEOMETRY_ID {
@@ -162,7 +166,7 @@ impl<'a> CommittedScene<'a> {
     /// Returns the axis-aligned bounding box og the scene
     pub fn bounds(&self) -> Result<embree4_sys::RTCBounds> {
         let mut bounds = embree4_sys::RTCBounds::default();
-        unsafe { embree4_sys::rtcGetSceneBounds(self.scene.handle, &mut bounds as *mut RTCBounds) };
-        device_error_or(self.scene.device, bounds, "Could not get bounds")
+        unsafe { embree4_sys::rtcGetSceneBounds(self.handle, &mut bounds as *mut RTCBounds) };
+        device_error_or(self.device, bounds, "Could not get bounds")
     }
 }
