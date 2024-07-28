@@ -3,7 +3,7 @@ use std::{ffi::c_void, marker::PhantomData, ptr::null_mut};
 use anyhow::{bail, Result};
 use embree4_sys::RTCBounds;
 
-use crate::{device::Device, device_error_or, device_error_raw, geometry::Geometry};
+use crate::{device::Device, device_error_or, device_error_raw, geometry::Geometry, Mxcsr};
 
 pub struct Scene<'a> {
     device: &'a Device,
@@ -110,6 +110,7 @@ impl<'a> Scene<'a> {
     /// ```
     pub fn commit(&self) -> Result<CommittedScene<'a>> {
         unsafe {
+            let _mxcsr = Mxcsr::setup();
             embree4_sys::rtcCommitScene(self.handle);
         }
         device_error_or(
@@ -200,6 +201,7 @@ impl<'a> CommittedScene<'a> {
         };
 
         unsafe {
+            let _mxcsr = Mxcsr::setup();
             embree4_sys::rtcIntersect1(self.handle, &mut ray_hit, std::ptr::null_mut());
         }
         device_error_or(self.device, (), "Could not intersect ray")?;
@@ -216,7 +218,10 @@ impl<'a> CommittedScene<'a> {
     /// Returns the axis-aligned bounding box og the scene
     pub fn bounds(&self) -> Result<embree4_sys::RTCBounds> {
         let mut bounds = embree4_sys::RTCBounds::default();
-        unsafe { embree4_sys::rtcGetSceneBounds(self.handle, &mut bounds as *mut RTCBounds) };
+        unsafe {
+            let _mxcsr = Mxcsr::setup();
+            embree4_sys::rtcGetSceneBounds(self.handle, &mut bounds as *mut RTCBounds);
+        };
         device_error_or(self.device, bounds, "Could not get bounds")
     }
 }
