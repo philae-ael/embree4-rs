@@ -7,7 +7,7 @@ use std::{
 use anyhow::{bail, Result};
 use embree4_sys::RTCError;
 
-use crate::device_error_raw;
+use crate::{device_error_raw, Mxcsr};
 
 pub struct Device {
     pub(crate) handle: embree4_sys::RTCDevice,
@@ -37,6 +37,7 @@ impl Device {
         let handle = match config {
             None => unsafe { embree4_sys::rtcNewDevice(null_mut()) },
             Some(config) => unsafe {
+                let _mxcsr = Mxcsr::setup();
                 embree4_sys::rtcNewDevice(config.as_bytes() as *const _ as _)
             },
         };

@@ -20,6 +20,8 @@ pub mod device;
 pub mod geometry;
 pub mod scene;
 
+use std::arch::asm;
+
 use anyhow::{bail, Result};
 
 pub mod prelude {
@@ -44,4 +46,35 @@ fn device_error_or<T>(device: &device::Device, ok_value: T, message: &str) -> Re
     device_error_raw(device.handle)
         .map(|error| bail!("{}: {:?}", message, error))
         .unwrap_or(Ok(ok_value))
+}
+
+// Ensure that "Flush to Zero" and "Denormals are Zero" are enabled and restore old flags when
+// needed
+pub(crate) struct Mxcsr {
+    old: u32,
+}
+
+impl Mxcsr {
+    pub(crate) unsafe fn setup() -> Self {
+        let mut this = Self { old: 0 };
+
+        #[cfg(all(target_arch = "x86_64", target_feature = "sse"))]
+        {
+            asm!("stmxcsr [{}]", in(reg)(std::ptr::addr_of_mut!(this.old)));
+
+            let new = this.old | 0x8040;
+            asm!("ldmxcsr [{}]", in(reg) &new);
+        }
+
+        this
+    }
+}
+
+#[cfg(all(target_arch = "x86_64", target_feature = "sse"))]
+impl Drop for Mxcsr {
+    fn drop(&mut self) {
+        unsafe {
+            asm!("ldmxcsr [{}]", in(reg) &self.old);
+        }
+    }
 }
