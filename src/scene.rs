@@ -1,3 +1,5 @@
+use std::{ffi::c_void, marker::PhantomData, ptr::null_mut};
+
 use anyhow::{bail, Result};
 use embree4_sys::RTCBounds;
 
@@ -119,6 +121,32 @@ impl<'a> Scene<'a> {
             "Could not commit scene",
         )
     }
+
+    pub fn register_scene_progress_monitor_callback<'scope, F: FnMut(f64) -> bool + 'scope>(
+        &mut self,
+        mut f: F,
+    ) -> SceneProgressCallbackScope<'scope> {
+        unsafe extern "C" fn trampoline<'scope, F: FnMut(f64) -> bool + 'scope>(
+            user_ptr: *mut ::std::os::raw::c_void,
+            progress: f64,
+        ) -> bool {
+            let f = &mut *(user_ptr as *mut F);
+            f(progress)
+        }
+        unsafe {
+            embree4_sys::rtcSetSceneProgressMonitorFunction(
+                self.handle,
+                Some(trampoline::<F>),
+                &mut f as &mut _ as *mut _ as *mut c_void,
+            )
+        }
+
+        SceneProgressCallbackScope {
+            handle: self.handle,
+            lifetime: Default::default(),
+        }
+    }
+    pub fn unregister_scene_progress_monitor_function(&mut self) {}
 }
 
 impl<'a> Drop for Scene<'a> {
@@ -126,6 +154,17 @@ impl<'a> Drop for Scene<'a> {
         unsafe {
             embree4_sys::rtcReleaseScene(self.handle);
         }
+    }
+}
+
+pub struct SceneProgressCallbackScope<'a> {
+    handle: embree4_sys::RTCScene,
+    lifetime: PhantomData<&'a ()>,
+}
+
+impl Drop for SceneProgressCallbackScope<'_> {
+    fn drop(&mut self) {
+        unsafe { embree4_sys::rtcSetSceneProgressMonitorFunction(self.handle, None, null_mut()) }
     }
 }
 
