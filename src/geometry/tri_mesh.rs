@@ -2,7 +2,7 @@ use std::{mem::size_of, slice};
 
 use anyhow::{bail, Result};
 
-use crate::{device_error_or, Device};
+use crate::{device::Device, device_error_or};
 
 use super::Geometry;
 

@@ -3,7 +3,7 @@ use std::{ffi::c_void, marker::PhantomData, ptr::null_mut};
 use anyhow::{bail, Result};
 use embree4_sys::RTCBounds;
 
-use crate::{device_error_or, device_error_raw, geometry::Geometry, Device};
+use crate::{device::Device, device_error_or, device_error_raw, geometry::Geometry};
 
 pub struct Scene<'a> {
     device: &'a Device,

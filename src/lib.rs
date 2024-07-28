@@ -22,8 +22,14 @@ pub mod scene;
 
 use anyhow::{bail, Result};
 
-pub use device::Device;
-pub use scene::{Scene, SceneOptions};
+pub mod prelude {
+    pub use crate::device::Device;
+    pub use crate::scene::{CommittedScene, Scene, SceneOptions};
+}
+
+pub mod sys {
+    pub use embree4_sys::*;
+}
 
 fn device_error_raw(device: embree4_sys::RTCDevice) -> Option<embree4_sys::RTCError> {
     let err = unsafe { embree4_sys::rtcGetDeviceError(device) };
@@ -34,7 +40,7 @@ fn device_error_raw(device: embree4_sys::RTCDevice) -> Option<embree4_sys::RTCEr
     }
 }
 
-fn device_error_or<T>(device: &Device, ok_value: T, message: &str) -> Result<T> {
+fn device_error_or<T>(device: &device::Device, ok_value: T, message: &str) -> Result<T> {
     device_error_raw(device.handle)
         .map(|error| bail!("{}: {:?}", message, error))
         .unwrap_or(Ok(ok_value))

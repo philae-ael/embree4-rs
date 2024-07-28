@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, ptr};
 
-use crate::{device_error_or, Device};
+use crate::{device::Device, device_error_or};
 
 use anyhow::Result;
 use embree4_sys::{RTCRayHit, RTC_INVALID_GEOMETRY_ID};
