@@ -16,14 +16,14 @@
 //! See the [examples/](https://github.com/psytrx/embree4-rs/tree/main/examples) for a quick start
 //! on how to use this crate.
 
-mod device;
+pub mod device;
 pub mod geometry;
-mod scene;
+pub mod scene;
 
 use anyhow::{bail, Result};
 
-pub use device::*;
-pub use scene::*;
+pub use device::Device;
+pub use scene::{Scene, SceneOptions};
 
 fn device_error_raw(device: embree4_sys::RTCDevice) -> Option<embree4_sys::RTCError> {
     let err = unsafe { embree4_sys::rtcGetDeviceError(device) };

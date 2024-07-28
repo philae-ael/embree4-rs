@@ -9,7 +9,7 @@ repository = "https://github.com/psytrx/embree4-rs/"
 documentation = "https://docs.rs/embree4-rs/"
 license-file = "LICENSE"
 
-exclude = [".gitignore"]
+exclude = [".gitignore", "justfile"]
 
 [dev-dependencies]
 glam = { version = "0.24.2", features = ["rand"] }
