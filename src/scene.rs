@@ -122,6 +122,11 @@ impl<'a> Scene<'a> {
         )
     }
 
+    /// Setup a callback that is called on progress and returns a structure that will remove is on drop.
+    ///
+    /// For semantic see the reference for [rtcSetSceneProgressMonitorFunction](https://github.com/RenderKit/embree/blob/master/doc/src/api/rtcSetSceneProgressMonitorFunction.md).
+    ///
+    /// To setup a permanent callback, use [std::mem::forget] on the returned [SceneProgressCallbackScope] but this will force the callback to have a `'static` lifetime.
     pub fn register_scene_progress_monitor_callback<'scope, F: FnMut(f64) -> bool + 'scope>(
         &mut self,
         mut f: F,
@@ -146,7 +151,13 @@ impl<'a> Scene<'a> {
             lifetime: Default::default(),
         }
     }
-    pub fn unregister_scene_progress_monitor_function(&mut self) {}
+
+    /// Remove a previously setup progress monitor callback.
+    ///
+    /// This function should not be needed as the SceneProgressCallbackScope struct should do it automatically.
+    pub fn remove_scene_progress_monitor_callback(&mut self) {
+        unsafe { embree4_sys::rtcSetSceneProgressMonitorFunction(self.handle, None, null_mut()) }
+    }
 }
 
 impl<'a> Drop for Scene<'a> {

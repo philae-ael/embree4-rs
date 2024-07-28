@@ -57,13 +57,32 @@ impl Device {
         device_error_raw(self.handle)
     }
 
+    /// Returns the device as a raw handle.
+    ///
     /// # Safety
     ///
-    /// The device must be kept alive and must not be released
+    /// The device must not be released.
     pub unsafe fn as_raw_handle(&self) -> embree4_sys::RTCDevice {
         self.handle
     }
 
+    /// Setup a callback that is called on error and returns a structure that will remove is on drop.
+    ///
+    /// For semantic see the reference for [RtcSetDeviceErrorFunction](https://github.com/RenderKit/embree/blob/master/doc/src/api/rtcSetDeviceErrorFunction.md).
+    ///
+    /// To setup a permanent callback, use [std::mem::forget] on the returned [ErrorCallBackScope] but this will force the callback to have a `'static` lifetime.
+    ///
+    /// # Example
+    ///```
+    /// use embree4_rs::*;
+    ///
+    /// let device = Device::try_new(None).unwrap();
+    ///
+    /// // setup a permanent callback
+    /// std::mem::forget(device.register_error_callback(|code, err|{
+    ///     print!("Embree error ({code:?}): {err}");
+    /// }));
+    /// ```
     pub fn register_error_callback<'scope, F: FnMut(RTCError, &str) + 'scope>(
         &self,
         mut callback: F,
@@ -92,6 +111,26 @@ impl Device {
             lifetime: Default::default(),
         }
     }
+
+    /// Setup a callback that is called on memory allocation and deallocations and returns a structure that will remove is on drop.
+    ///
+    /// For semantic see the reference for [RTCSetDeviceMemoryMonitorFunction](https://github.com/RenderKit/embree/blob/master/doc/src/api/rtcSetSceneProgressMonitorFunction.md).
+    ///
+    /// To setup a permanent callback, use [std::mem::forget] on the returned [MemoryMonitorCallBackScope] but this will force the callback to have a `'static` lifetime.
+    ///
+    ///```
+    /// use embree4_rs::*;
+    ///
+    /// let device = Device::try_new(None).unwrap();
+    /// let _memory_monitor_callback = device.register_device_memory_monitor_callback(|size, _| {
+    ///     if size >= 0 {
+    ///         print!("Embree allocation of {}bytes", size);
+    ///     } else {
+    ///         print!("Embree deallocation of {}bytes", -size);
+    ///     }
+    ///      true
+    /// });
+    /// ```
     pub fn register_device_memory_monitor_callback<
         'scope,
         F: FnMut(isize, bool) -> bool + 'scope,
@@ -121,6 +160,25 @@ impl Device {
             lifetime: Default::default(),
         }
     }
+
+    /// Remove a previously setup error callback.
+    ///
+    /// This function should not be needed as the [ErrorCallBackScope] struct should do it automatically.
+    pub fn remove_error_callback(&mut self) {
+        unsafe {
+            embree4_sys::rtcSetDeviceMemoryMonitorFunction(self.handle, None, null_mut());
+        }
+    }
+
+    /// Remove a previously setup memory monitor callback.
+    ///
+    /// This function should not be needed as the [MemoryMonitorCallBackScope] struct should do it
+    /// automatically.
+    pub fn remove_memory_monitor_callback(&mut self) {
+        unsafe {
+            embree4_sys::rtcSetDeviceMemoryMonitorFunction(self.handle, None, null_mut());
+        }
+    }
 }
 
 impl Drop for Device {
@@ -131,6 +189,10 @@ impl Drop for Device {
     }
 }
 
+/// A type that will remove the device error callback on drop
+///
+/// # Note:
+/// The previous callback is not restored on drop
 pub struct ErrorCallBackScope<'scope> {
     device: embree4_sys::RTCDevice,
     lifetime: PhantomData<&'scope ()>,
@@ -144,6 +206,10 @@ impl Drop for ErrorCallBackScope<'_> {
     }
 }
 
+/// A type that will remove the memory monitor callback on drop
+///
+/// # Note:
+/// The previous callback is not restored on drop
 pub struct MemoryMonitorCallBackScope<'scope> {
     device: embree4_sys::RTCDevice,
     lifetime: PhantomData<&'scope ()>,
@@ -156,6 +222,7 @@ impl Drop for MemoryMonitorCallBackScope<'_> {
         }
     }
 }
+
 #[test]
 fn try_new_valid_config() {
     let ok_device = Device::try_new(Some("verbose=0"));
